@@ -1,6 +1,6 @@
 ```
 
-Prerequiste of minikube
+Prerequiste of minikube (t2.medium| = > 2 cpu cores)
 
 
 0) Windows features ON/OFF
