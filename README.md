@@ -11,7 +11,7 @@ This project documents how to install and configure **Minikube** — a lightweig
 
 ## 📋 Prerequisites
 
-* **Minimum instance type:** `t2.large` or higher (≥ **2 CPU cores**)
+* **Minimum instance type:** `t3.large` or higher (≥ **2 CPU cores**)
 * **Docker Desktop** installed and running in the background
 
 ---
