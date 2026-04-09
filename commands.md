@@ -1,3 +1,4 @@
+```
 // setup minikube on EC2 | c7.iflex.large | t3.medium 
 
 References: 
@@ -10,6 +11,7 @@ sudo yum install docker -y
 sudo systemctl start docker 
 sudo systemctl enable docker 
 sudo usermod -aG docker $USER 
+newgrp docker
 docker images
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-latest.x86_64.rpm
 sudo rpm -Uvh minikube-latest.x86_64.rpm
@@ -22,3 +24,4 @@ mv ./kubectl ~/.local/bin/kubectl
 kubectl version --client
 kubectl get nodes 
    
+```
