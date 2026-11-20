@@ -1,128 +1,136 @@
-# Minikube Kubernetes Practice Lab
+Here’s a sorted and updated README draft. It combines the overlapping setup guides into one flow, then moves into the NGINX deployment and hands-on practice. I also corrected the Linux package commands, made the Docker prerequisites clearer, and used `nginx:stable` consistently.
 
-Objective: Install Minikube, create a local Kubernetes cluster, and practice Pods, Deployments, Services, scaling, networking, and troubleshooting.
+```markdown
+# EC2 and Minikube Kubernetes Practice Lab
 
-Prerequisites: Docker, Minikube, and kubectl installed.
+A beginner-friendly lab for setting up a local Kubernetes cluster with Minikube, deploying NGINX, and practicing core Kubernetes operations.
 
-## 1. Install Minikube
+> Minikube is intended for local learning, development, and testing. This lab is not a production Kubernetes setup.
 
-macOS
+## Learning objectives
 
+- Install Minikube and kubectl
+- Start and inspect a local Kubernetes cluster
+- Create Pods and Deployments
+- Expose applications with Kubernetes Services
+- Practice scaling, rolling updates, namespaces, and troubleshooting
+- Deploy NGINX using YAML manifests
+
+## Architecture
+
+```text
+User → NodePort Service → Deployment → NGINX Pods
 ```
-brew install minikube
-brew install kubectl
+
+## Prerequisites
+
+Install and start Docker before starting Minikube.
+
+Recommended resources for the host:
+
+- 2 or more CPU cores
+- 4 GB or more available memory
+- Internet access
+
+Check your tools:
+
+```bash
+docker --version
+minikube version
+kubectl version --client
+```
+
+## 1. Install the tools
+
+### macOS
+
+```bash
+brew install minikube kubectl
 brew install --cask docker
 ```
 
-Windows (PowerShell)
+Start Docker Desktop after installation.
 
-```
-winget install Kubernetes.minikube
-winget install Kubernetes.kubectl
-winget install Docker.DockerDesktop
-```
+### Windows with WSL2
 
-Amazon Linux 2023 (x86_64)
+1. Install WSL2 from an Administrator PowerShell window:
 
-```
+   ```powershell
+   wsl --install
+   ```
+
+2. Restart Windows if prompted.
+3. Install Docker Desktop and enable WSL2 integration.
+4. Install Minikube and kubectl using the official guides:
+
+   - [Install Minikube](https://minikube.sigs.k8s.io/docs/start/)
+   - [Install kubectl](https://kubernetes.io/docs/tasks/tools/)
+
+Start Docker Desktop before continuing.
+
+### Amazon Linux 2023 (x86_64)
+
+Install Docker:
+
+```bash
 sudo dnf update -y
+sudo dnf install -y docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+```
 
+Log out and back in so the Docker group membership takes effect. Confirm Docker works:
+
+```bash
+docker --version
+docker ps
+```
+
+Install kubectl:
+
+```bash
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo install kubectl /usr/local/bin/kubectl
+```
+
+Install Minikube:
+
+```bash
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
-
-minikube version
 ```
 
-On Amazon Linux, also install and configure a supported container or VM driver, such as Docker. For Docker, use a non-root user with Docker access. An EC2 instance must have sufficient CPU, RAM, and disk space.
+An EC2 instance needs enough CPU, memory, and disk space for both the host and the Minikube cluster. The Docker driver requires a working Docker installation and user access to Docker.
 
-## 2. Start Minikube Cluster
+## 2. Start and inspect the cluster
 
-Start Docker Desktop first on macOS or Windows.
+On macOS, Windows, and Linux with Docker available:
 
-```
-minikube start --driver=docker
-
+```bash
+minikube start --driver=docker --cpus=2 --memory=4096
 minikube status
 kubectl cluster-info
-kubectl get nodes
 kubectl get nodes -o wide
 ```
 
-## 3. Practice Kubernetes Pods
+Check that the node reaches `Ready`:
 
-```
-# Create Pod
-kubectl run mypod --image=nginx
-
-# List Pods
-kubectl get pods
-kubectl get pods -o wide
-
-# Pod details
-kubectl describe pod mypod
-
-# View logs
-kubectl logs mypod
-
-# Access container
-kubectl exec -it mypod -- /bin/sh
-
-# Delete Pod
-kubectl delete pod mypod
+```bash
+kubectl get nodes
 ```
 
-## 4. Practice Deployments
-
-```
-# Create Deployment
-kubectl create deployment myapp --image=nginx
-
-# View Deployment
-kubectl get deployments
-
-# View Pods
-kubectl get pods
-
-# Scale Deployment
-kubectl scale deployment myapp --replicas=3
-
-# Verify
-kubectl get pods -o wide
-
-# Deployment details
-kubectl describe deployment myapp
-```
-
-## 5. Practice Kubernetes Services
-
-```
-# Expose Deployment
-kubectl expose deployment myapp \
-  --type=NodePort \
-  --port=80 \
-  --target-port=80
-
-# List Services
-kubectl get svc
-
-# Get application URL
-minikube service myapp --url
-```
-
-On Docker Desktop, keep the terminal running if Minikube creates a temporary service tunnel.
-
-## 6. Practice YAML Deployment
+## 3. Deploy NGINX with YAML
 
 Create `deployment.yaml`:
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nginx-deployment
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: nginx
@@ -138,339 +146,247 @@ spec:
             - containerPort: 80
 ```
 
-Apply and verify:
+Apply the manifest and check the Deployment and Pods:
 
-```
+```bash
 kubectl apply -f deployment.yaml
 kubectl get deployments
+kubectl get pods -o wide
+```
+
+## 4. Expose NGINX with a NodePort Service
+
+Create `service.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  type: NodePort
+  selector:
+    app: nginx
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30007
+```
+
+Apply it and inspect the Service:
+
+```bash
+kubectl apply -f service.yaml
+kubectl get service nginx-service
+```
+
+Open the application:
+
+```bash
+minikube service nginx-service
+```
+
+To print the URL instead:
+
+```bash
+minikube service nginx-service --url
+```
+
+On Docker Desktop, the terminal may need to stay open while Minikube runs the service tunnel.
+
+## 5. Practice with kubectl
+
+### Pods
+
+```bash
+kubectl run mypod --image=nginx:stable
+kubectl get pods -o wide
+kubectl describe pod mypod
+kubectl logs mypod
+kubectl exec -it mypod -- /bin/sh
+kubectl delete pod mypod
+```
+
+### Deployments and scaling
+
+```bash
+kubectl create deployment myapp --image=nginx:stable
+kubectl get deployments
 kubectl get pods
+
+kubectl scale deployment myapp --replicas=3
+kubectl get pods -o wide
+kubectl describe deployment myapp
 ```
 
-## 7. Practice ClusterIP, NodePort and LoadBalancer
+### Services
 
+Expose `myapp`:
+
+```bash
+kubectl expose deployment myapp \
+  --name=myapp-service \
+  --type=NodePort \
+  --port=80 \
+  --target-port=80
+
+kubectl get services
+minikube service myapp-service --url
 ```
-# ClusterIP
+
+Practice other Service types:
+
+```bash
 kubectl expose deployment nginx-deployment \
   --name=nginx-clusterip \
   --type=ClusterIP \
   --port=80
 
-# NodePort
-kubectl expose deployment nginx-deployment \
-  --name=nginx-nodeport \
-  --type=NodePort \
-  --port=80
-
-# LoadBalancer
 kubectl expose deployment nginx-deployment \
   --name=nginx-loadbalancer \
   --type=LoadBalancer \
   --port=80
 
-# Check Services
-kubectl get svc
+kubectl get services
 ```
 
-For LoadBalancer testing, open a separate terminal:
+For Minikube LoadBalancer testing, run this in a separate terminal:
 
-```
+```bash
 minikube tunnel
 ```
 
-Then check:
+### Rolling updates and rollback
 
-```
-kubectl get svc nginx-loadbalancer
-```
+The `myapp` Deployment created above uses `nginx` as its container name.
 
-## 8. Practice Rolling Updates and Rollback
-
-```
-# Update image
+```bash
 kubectl set image deployment/myapp nginx=nginx:1.27
-
-# Check rollout
 kubectl rollout status deployment/myapp
-
-# View history
 kubectl rollout history deployment/myapp
-
-# Rollback
 kubectl rollout undo deployment/myapp
 ```
 
-The container name in the `myapp` Deployment created by `kubectl create deployment` is `nginx`.
+### Namespaces
 
-## 9. Practice Namespace
-
-```
+```bash
 kubectl create namespace dev
-
-kubectl create deployment webapp \
-  --image=nginx \
-  -n dev
-
+kubectl create deployment webapp --image=nginx:stable -n dev
 kubectl get pods -n dev
-
 kubectl get all -n dev
 
 kubectl delete namespace dev
 ```
 
-## 10. Practice Minikube Addons and Dashboard
+## 6. Optional Minikube add-ons
 
-```
-# List addons
+List available add-ons:
+
+```bash
 minikube addons list
+```
 
-# Enable metrics server
+Enable metrics, ingress, and the dashboard:
+
+```bash
 minikube addons enable metrics-server
-
-# View metrics
-kubectl top nodes
-kubectl top pods
-
-# Enable ingress
 minikube addons enable ingress
-
-# Open dashboard
-minikube dashboard
-```
-
-Metrics may take a short time to become available.
-
-## 11. Practice Troubleshooting
-
-```
-kubectl get events --sort-by=.metadata.creationTimestamp
-
-kubectl describe pod mypod
-
-kubectl logs mypod
-
-kubectl get pods -A
-
-kubectl get endpointslices
-
-kubectl get nodes
-
-kubectl cluster-info
-
-minikube logs
-```
-
-## 12. Practice Minikube Cluster Management
-
-```
-# Cluster status
-minikube status
-
-# SSH into Minikube node
-minikube ssh
-
-# Show node IP
-minikube ip
-
-# List profiles
-minikube profile list
-
-# Stop cluster
-minikube stop
-
-# Start cluster again
-minikube start
-
-# Delete cluster
-minikube delete
-```
-
-# 🐳 Kubernetes Minikube Setup on Windows/Linux (Docker Driver)
-
-This project documents how to install and configure **Minikube** — a lightweight Kubernetes implementation — using **Docker** as a driver, on both **Windows (WSL2)** and **Linux** environments.
-
----
-## 📸 Screenshot
-
-![minikube](https://github.com/atulkamble/ec2-minikube/blob/main/minikube.png)
-
----
-
-## 📋 Prerequisites
-
-* **Minimum instance type:** `t3.large` or higher (≥ **2 CPU cores**)
-* **Docker Desktop** installed and running in the background
-
----
-
-## 🖥️ Windows Setup
-
-### 0️⃣ Enable Windows Features
-
-* Go to **Windows Features** → Turn on:
-
-  * **Hypervisor Platform**
-  * **Virtual Machine Platform**
-  * **Windows Subsystem for Linux**
-
-📌 Restart your system.
-
----
-
-### 1️⃣ Install WSL2
-
-Open **PowerShell** as Administrator and run:
-
-```bash
-wsl --install
-```
-
----
-
-### 2️⃣ Install Docker Desktop
-
-* Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-* Enable WSL2 integration during setup.
-
----
-
-### 3️⃣ Install Minikube
-
-Follow [Minikube official install guide](https://minikube.sigs.k8s.io/docs/start/) for Windows or see the Linux section below for CLI instructions.
-
----
-
-### 4️⃣ Start Minikube
-
-Ensure Docker Desktop is running, then start Minikube:
-
-```bash
-minikube start --driver=docker --cpus=2 --memory=4096
-```
-
----
-
-### 5️⃣ Verify kubectl & Minikube
-
-```bash
-minikube status
-kubectl get nodes
-kubectl get pods -A
-```
-
----
-
-## 🐧 Linux Setup
-
-### Update & Install Docker
-
-```bash
-sudo yum update -y
-sudo yum install docker -y
-sudo systemctl enable docker
-sudo systemctl start docker
-```
-
----
-
-### Install kubectl
-
-```bash
-curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
-chmod +x kubectl
-sudo mv kubectl /usr/local/bin/
-```
-
----
-
-### Install Minikube
-
-```bash
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
-```
-
-Add your user to the Docker group:
-
-```bash
-sudo usermod -aG docker $USER && newgrp docker
-```
-
----
-
-### Start Minikube
-
-```bash
-minikube start --driver=docker --cpus=2 --memory=4096
-```
-
----
-
-### Verify Setup
-
-```bash
-minikube status
-kubectl get nodes
-kubectl get pods -A
-```
-
----
-
-## 🔧 Optional Addons
-
-Enable useful Minikube addons:
-
-```bash
-minikube addons enable default-storageclass
-minikube addons enable storage-provisioner
-minikube addons enable metrics-server
 minikube addons enable dashboard
 ```
 
----
+View resource metrics after they become available:
 
-## 📊 Access Kubernetes Dashboard
+```bash
+kubectl top nodes
+kubectl top pods
+```
+
+Open the dashboard:
 
 ```bash
 minikube dashboard
 ```
 
----
+## 7. Troubleshooting
 
-## 🛑 Stop Minikube
+```bash
+kubectl get pods -A
+kubectl get events --sort-by=.metadata.creationTimestamp
+kubectl describe pod <pod-name>
+kubectl logs <pod-name>
+kubectl get services
+kubectl get endpointslices
+kubectl get nodes
+kubectl cluster-info
+minikube logs
+```
+
+If a Pod is not ready, inspect its description and events first:
+
+```bash
+kubectl describe pod <pod-name>
+```
+
+## 8. Cluster management
+
+```bash
+minikube status
+minikube ip
+minikube profile list
+minikube ssh
+
+minikube stop
+minikube start
+```
+
+Delete the cluster when you no longer need it:
+
+```bash
+minikube delete
+```
+
+## 9. Cleanup the NGINX lab
+
+From the directory containing the YAML files:
+
+```bash
+kubectl delete -f service.yaml
+kubectl delete -f deployment.yaml
+```
+
+Stop Minikube:
 
 ```bash
 minikube stop
 ```
 
----
+## Key concepts
 
-## 📌 Notes
+- **Pod:** Runs one or more containers.
+- **Deployment:** Manages replicated Pods and supports updates and rollbacks.
+- **Service:** Provides a stable network endpoint for selected Pods.
+- **NodePort:** Exposes a Service on a port reachable through the Minikube node.
+- **Minikube:** Runs a Kubernetes cluster for local learning and testing.
 
-* Ensure **Docker Desktop** is running before starting Minikube.
-* Recommended specs: 2+ vCPUs, 4GB+ RAM
-* Supports **Docker driver** for isolated, fast local Kubernetes clusters.
+## License
 
----
+This project is released under the [MIT License](LICENSE).
 
-## 📜 License
+## Author
 
-This guide is released under the [MIT License](LICENSE)
+**Atul Kamble**  
+Cloud Solutions Architect | DevOps Trainer
 
----
+- [LinkedIn](https://www.linkedin.com/in/atuljkamble/)
+- [GitHub](https://github.com/atulkamble)
+- [X](https://x.com/Atul_Kamble)
+- [Instagram](https://www.instagram.com/atuljkamble/)
+- [Website](https://atulkamble.com/)
 
-## 👨‍💻 Author
+## Contributing
 
-**Atul Kamble**
+Suggestions and contributions are welcome. Open an issue or submit a pull request to improve the lab.
+```
 
-- 💼 [LinkedIn](https://www.linkedin.com/in/atuljkamble)
-- 🐙 [GitHub](https://github.com/atulkamble)
-- 🐦 [X](https://x.com/Atul_Kamble)
-- 📷 [Instagram](https://www.instagram.com/atuljkamble)
-- 🌐 [Website](https://www.atulkamble.in)
-
----
-
-
-## 🙌 Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests to improve this project.
+I used `atulkamble.com` for the website link, based on your current site information.
