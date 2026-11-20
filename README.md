@@ -1,6 +1,3 @@
-Here’s a sorted and updated README draft. It combines the overlapping setup guides into one flow, then moves into the NGINX deployment and hands-on practice. I also corrected the Linux package commands, made the Docker prerequisites clearer, and used `nginx:stable` consistently.
-
-```markdown
 # EC2 and Minikube Kubernetes Practice Lab
 
 A beginner-friendly lab for setting up a local Kubernetes cluster with Minikube, deploying NGINX, and practicing core Kubernetes operations.
@@ -387,6 +384,3 @@ Cloud Solutions Architect | DevOps Trainer
 ## Contributing
 
 Suggestions and contributions are welcome. Open an issue or submit a pull request to improve the lab.
-```
-
-I used `atulkamble.com` for the website link, based on your current site information.
